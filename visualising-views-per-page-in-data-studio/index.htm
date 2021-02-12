@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="styles.css">
+    <meta charset="utf-8">
+    <title>Visualising views per page in Data Studio</title>
+</head>
+
+<body><main><p>Hello, dear reader! I put together this blog post back when I worked in marketing. It&#39;s been an interesting couple of years - I&#39;m now a developer, and my new writings can be viewed <a href='https://www.rhysmills.com'>here</a>. However, I noticed this page was still getting hits though the post no longer existed, so found a way to keep it up here since it seems to be of interest to someone out there.</p>
+    <p>I will keep it up in this mysterious locale, away from the rest of my site, enjoy!</p>
+    <hr />
+    <h1>Visualising views per page in Data Studio</h1>
+    <p><a href='https://web.archive.org/web/20190608174640/https://datastudio.google.com/'>Data Studio</a> is a fantastic <strong>free data visualisation tool</strong> from Google. You can create slick reports in a short amount of time, and best of all it hooks up with ease to a number of Google’s other products, including Google Analytics. That means you can quickly create a GA report which updates dynamically to show off the results of your marketing and content efforts to internal stakeholders or clients.</p>
+    <p>What this post explores is how to use Data Studio to dynamically report on which sections of a site deliver the most <strong>views per page</strong>, rather than which sections of a site deliver the most total page views. <strong>Understanding the difference can significantly improve your understanding of which content performs best on your site</strong>.</p>
+    <p>Consider the following case as an illustration:</p>
+    <h4><strong>Case: A content site wants better insight into its content performance</strong></h4>
+    <p>The team behind a particular content website, Hillgrove Publishing, focus their efforts on two kinds of content: <strong>general news</strong> and <strong>opinion columns</strong>. They want to know where to focus their efforts in the future.</p>
+    <p><img src="https://web.archive.org/web/20190608174640im_/http://rhysmills.com/blog/wp-content/uploads/content-drilldown-2.png" referrerpolicy="no-referrer" alt="img"></p>
+    <p>By looking at the ‘Content Drilldown’ tab in Google Analytics, they see that the ‘general news’ section delivers ten times the page views of original columns. So should they focus their efforts on general news? Well, <em>not necessarily</em>.</p>
+    <p>What if they produce 1000 news articles each month, but only ten opinion columns? That would mean that <strong>an individual opinion column produces significantly more traffic than an individual news piece</strong>.</p>
+    <p><img src="https://web.archive.org/web/20190608174640im_/http://rhysmills.com/blog/wp-content/uploads/the-numbers.png" referrerpolicy="no-referrer" alt="img"></p>
+    <p>What the team needs is a function which will give them the <strong>‘views per page’</strong> for each section. If they could track this dynamically, they would have <strong>a much better idea of which content is performing better over time.</strong></p>
+    <p>Unfortunately, Google Analytics doesn’t offer any kind of ‘views per page’ metric out of the box. It’s rather manual task – you’ll have to look in the GA interface to count the number of pages in a section, then manually divide the total page views for a section by the number of pages in that section.</p>
+    <p>Fortunately – we can create a dynamic report in Data Studio which will provide this data for us. Doing so will involve a couple of the more complex facets of Data Studio: <strong>regular expressions</strong> (regex) and <strong>CASE Statements</strong>. One disclaimer here: <strong>this will only report on pages that have at least 1 page view during your reporting period.</strong></p>
+    <h3>1. Pull your GA data into data studio</h3>
+    <p>Open up <a href='https://web.archive.org/web/20190608174640/https://datastudio.google.com/'>Data Studio</a>. If it’s not hooked up to your Google Analytics account already, choose ‘Add New Data Source’ and authorise the Google Analytics connector. Once it’s authorised, add the data source to your report.</p>
+    <h3>2. Identify areas of a site using a CASE statement</h3>
+    <p>Google Data Studio allows users to utilise <strong>CASE statements</strong> in order to add their own custom data fields alongside GA’s native data fields like <strong>‘Page Views’</strong> or <strong>‘Gender’</strong>. We’re going to use the CASE statement to organise our site content into categories based on their URLs, and then output our pages into specific categories, for example all news articles will be categorised as ‘News’.</p>
+    <p>CASE statements will be familiar to those who know the basics of SQL or similar query languages, and potentially bewildering to everyone else – so I’ll try to systematically explain the basics in order to help you create your own query.</p>
+    <p>There are several ways to identify areas of your site in a CASE statement – I’m going to start with a ‘simple’ query, then show you how a more complicated RegEx query could be constructed.</p>
+    <h3>2.a. Identify areas of a site (with a simple structure) using a CASE statement</h3>
+    <p>Let’s take the earlier example of Hillgrove Publishing, who wanted to separate ‘news’ and ‘opinion’ content.</p>
+    <p>To complicate matters, they have started adding certain news stories under <code>/top-stories/</code> as well as <code>/news/</code>. Well, a CASE statement would make it easy for us to identify areas of the site in a way that Data Studio could understand:</p>
+    <pre><code>CASE
+    WHEN Page Path 1 = ‘/opinion/’ THEN &quot;Opinion&quot;
+    WHEN Page Path 1 = ‘/news/’ THEN &quot;News&quot;
+    WHEN Page Path 1 = ‘/top-stories/’ THEN &quot;News&quot;
+    ELSE “other”
+    END
+    </code></pre>
+    <p>We could add this function as a field in Data Studio by clicking the pencil (edit) icon on our Google Analytics data source. We would then create a custom field, paste this code into the ‘Formula’ text entry field, and add a sensible name to the ‘Name field’.</p>
+    <p><img src="https://web.archive.org/web/20190608174640im_/http://rhysmills.com/blog/wp-content/uploads/data-source-etc.png" referrerpolicy="no-referrer" alt="img">
+     
+    But what exactly does all that code mean? Let’s pick it apart line by line.</p>
+    <pre><code>CASE
+    </code></pre>
+    <p>This tells Data Studio that you’re about to start a CASE statement.</p>
+    <pre><code>WHEN [x] THEN [y]
+    </code></pre>
+    <p><code>[x]</code> here is a condition that must be met, and <code>[y]</code> is the output if this condition is met – this output can be <strong>text</strong> (a string) or a <strong>number</strong>. In the above CASE statement, we are checking the first section of the URL following the “.com” – which is a field called <strong>‘Page Path 1’</strong> in Google Analytics. If this section is <code>/opinion/</code> the CASE statement will output <strong>‘Opinion’</strong>.</p>
+    <p>This CASE statement will create a new Custom Field available throughout our Data Studio report alongside all of GA’s native fields. We’re going to call it <strong>‘Content Category’</strong> – it’ll be a Dimension (not a Metric).</p>
+    <p><strong>For the regular expression given, an input of the following URLs will output ‘Opinion’:</strong></p>
+    <pre><code>hillgrove-publishing.com/opinion/`
+    `hillgrove-publishing.com/opinion/my-first-column.html
+    </code></pre>
+    <p><strong>Conversely, the following will output ‘News’:</strong></p>
+    <pre><code>hillgrove-publishing.com/news/`
+    `hillgrove-publishing.com/news/breaking/`
+    `hillgrove-publishing.com/top-stories/
+    </code></pre>
+    <p><strong>Finally, the following will output ‘Other’:</strong></p>
+    <pre><code>hillgrove-publishing.com/2017/opinion/article/`
+    `hillgrove-publishing.com/about/`
+    `hillgrove-publishing.com/`
+    `hillgrove-publishing.com/breaking/news/omg.html`
+    `hillgrove-publishing.com/breaking-news/
+    </code></pre>
+    <p>This works for simple URL structures where <strong>‘news’</strong> or <strong>‘opinion’</strong> always appear in <strong>‘Page Path 1’</strong>, but what about more complicated structures? It may be that you need to use regular expressions to define your URLs.</p>
+    <h3>2.b. Identify areas of a site (with a complicated structure) using RegEx in a Case Statement</h3>
+    <p>For the earlier example of Hillgrove Publishing, who wanted to separate <strong>‘news’</strong> and <strong>‘opinion’</strong> content, the finished item could also have looked like this:</p>
+    <pre><code>CASE
+    WHEN REGEXP_MATCH(Page, .*/opinion/.*&quot;) THEN &quot;Opinion&quot;
+    WHEN REGEXP_MATCH(Page, .*/(news|top-stories)/.*&quot;) THEN &quot;News&quot;
+    ELSE “Other”
+    END
+    </code></pre>
+    <p>In this CASE Statement, <code>REGEXP_MATCH</code> is a function which assesses whether an input matches a corresponding ‘<a href='https://web.archive.org/web/20190608174640/https://en.wikipedia.org/wiki/Regular_expression'>Regular Expression</a>’ – a method for defining strings.</p>
+    <p>In this example, the function is checking whether the <strong>‘Page’</strong> (i.e. URL) contains the characters <strong>‘/opinion/’</strong>. The full stop and asterix <code>.*</code> are special ‘wildcard’ characters in RegEx: a full stop <code>.</code> can stand in for any character, and an asterix <code>*</code> indicates that a character can be repeated any number of times (including zero times). Therefore <code>.*</code> represents any possible sequence of characters.</p>
+    <p>The pipe character <code>|</code> is another wildcard which functions as an ‘or’. In the above CASE statement, URLs containing either <strong>/news/</strong> or <strong>/top-stories/</strong> will both output as <strong>‘News’</strong>.</p>
+    <p><strong>For the regular expression given, an input of the following URLs will output ‘Opinion’:</strong></p>
+    <pre><code>hillgrove-publishing.com/opinion/`
+    `hillgrove-publishing.com/opinion/my-first-column.html`
+    `hillgrove-publishing.com/2017/opinion/article/
+    </code></pre>
+    <p><strong>The following will output ‘News’:</strong></p>
+    <pre><code>hillgrove-publishing.com/news/`
+    `hillgrove-publishing.com/news/breaking/`
+    `hillgrove-publishing.com/breaking/news/omg.html`
+    `hillgrove-publishing.com/top-stories/
+    </code></pre>
+    <p><strong>Finally, the following will output ‘Other’:</strong></p>
+    <pre><code>hillgrove-publishing.com/about/`
+    `hillgrove-publishing.com/`
+    `hillgrove-publishing.com/breaking-news/
+    </code></pre>
+    <p>RegEx gives us another system to categorise URLs, and can allow us to categorise content categories for sites that have a more complicated structure. RegEx has <strong>a lot more functionality</strong> than outlined here: much more detail can be found at <a href='https://web.archive.org/web/20190608174640/https://github.com/google/re2/wiki/Syntax'>https://github.com/google/re2/wiki/Syntax</a>.</p>
+    <h3>3. Count the number of pages in each section by modifying your CASE Statement</h3>
+    <p>Counting the number of pages should now involve the fairly simple task of creating a similar CASE Statement which outputs a number instead of a string. Let’s assume from now on that Hillgrove Publishing opted for the simpler CASE Statement (though this step would work with either mentioned method).</p>
+    <p>To count the pages in a section of their site, they’d use the following CASE Statement.</p>
+    <pre><code>SUM(CASE
+    WHEN Page Path 1 = ‘/opinion/’ THEN 1
+    WHEN Page Path 1 = ‘/news/’ THEN 1
+    WHEN Page Path 1 = ‘/top-stories/’ THEN 1
+    ELSE 0
+    END
+    </code></pre>
+    <p>This CASE statement basically identifies whether a URL meets one of three ‘when’ criteria: if it does, it outputs a 1, otherwise it outputs a 0. The <code>SUM</code> function then adds all the resulting numbers together.</p>
+    <p>This function will count the number of pages that meet the criteria outlined in the CASE Statement, and will appear as a custom Metric (not dimension) alongside GA’s native metrics. We’ll call this field <strong>‘Number of Pages’</strong></p>
+    <p>We can show this in a table with <strong>‘Content Category’</strong> as our Dimension to see the number of pages in each section:</p>
+    <p><img src="https://web.archive.org/web/20190608174640im_/http://rhysmills.com/blog/wp-content/uploads/views-per-page.png" referrerpolicy="no-referrer" alt="Table showing total pages">
+     
+    You can tally this against the number of pages in GA’s content drilldown to check it for accuracy.</p>
+    <h3>4. Counting the views per page</h3>
+    <p>We now have a method for categorising site content, and another method for counting the number of pages in each category. Now we can use them together in a graph.</p>
+    <p>First we create a final Custom Field. We’ll call it <strong>‘Views per Page’</strong>. It won’t require any complex CASE syntax, only:</p>
+    <pre><code>Page Views/Number of Pages
+    </code></pre>
+    <p>Finally we log this on a graph with <strong>‘Content Category’</strong> as a dimension. You may wish to apply a filter which excludes pages with a <strong>Content Category</strong> of <strong>‘Other’</strong> in order to focus on your chosen content categories rather than general navigational pages.</p>
+    <p><img src="https://web.archive.org/web/20190608174640im_/http://rhysmills.com/blog/wp-content/uploads/views-per-page-graph.png" referrerpolicy="no-referrer" alt="Graph showing views per page"></p>
+    <p><strong>And that’s it!</strong> You now have a dynamic report that will continue to update with data from Google Analytics, providing the <strong>views per page</strong> for each section you’ve outlined. You can even plot this on a line graph to chart how the numbers change over time.</p>
+    <p>If you can specify or at least estimate the cost to your business of each type of content, you will now be able to work out the cost per view for each of your content types – and figure out exactly how lucrative each content type is to the business. Not bad eh?</p>
+    </main>
+    </body>
+</html>
